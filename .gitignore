@@ -16,6 +16,9 @@ pnpm-debug.log*
 .env.*
 !.env.example
 
+# Vercel local config
+.vercel/
+
 # Editor and OS files
 .DS_Store
 Thumbs.db

@@ -59,6 +59,28 @@ Pasii recomandati:
 
 GitHub Actions va instala dependentele, va rula build-ul si va publica folderul `dist`.
 
+## Publicare pe Vercel
+
+Proiectul este pregatit si pentru Vercel prin `vercel.json`.
+
+Setari folosite de Vercel:
+
+```text
+Install Command: npm ci
+Build Command: npm run build
+Output Directory: dist
+```
+
+Pasii recomandati:
+
+1. Urca repository-ul pe GitHub.
+2. Intra pe Vercel si alege **Add New > Project**.
+3. Importa repository-ul.
+4. Lasa framework-ul detectat ca **Vite**.
+5. Apasa **Deploy**.
+
+Fisierul `vercel.json` include si o regula de rewrite catre `index.html`, utila pentru aplicatii React single-page.
+
 ## Structura
 
 ```text
