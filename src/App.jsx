@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
+  BookMarked,
   BookOpen,
   Brain,
   Check,
@@ -13,6 +14,7 @@ import {
   Sparkles,
   Sun,
   Target,
+  X,
 } from 'lucide-react';
 import { examChecklist, lessons } from './courseData.js';
 
@@ -44,6 +46,8 @@ function App() {
   const [flashIndex, setFlashIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
   const [answers, setAnswers] = useState({});
+  const [view, setView] = useState('lessons');
+  const [glossaryQuery, setGlossaryQuery] = useState('');
 
   const activeLesson = lessons.find((lesson) => lesson.id === activeId) ?? lessons[0];
   const activeIndex = lessons.findIndex((lesson) => lesson.id === activeLesson.id);
@@ -76,6 +80,7 @@ function App() {
     setFlashIndex(0);
     setFlipped(false);
     setMode('learn');
+    setView('lessons');
   };
 
   const moveLesson = (direction) => {
@@ -123,10 +128,19 @@ function App() {
           />
         </label>
 
+        <button
+          className={`glossary-nav-btn ${view === 'glossary' ? 'active' : ''}`}
+          onClick={() => setView('glossary')}
+          type="button"
+        >
+          <BookMarked size={17} />
+          Glosar termeni
+        </button>
+
         <nav className="lesson-list">
           {filteredLessons.map((lesson) => (
             <button
-              className={`lesson-tab ${lesson.id === activeLesson.id ? 'active' : ''}`}
+              className={`lesson-tab ${lesson.id === activeLesson.id && view === 'lessons' ? 'active' : ''}`}
               key={lesson.id}
               onClick={() => selectLesson(lesson.id)}
               type="button"
@@ -145,8 +159,17 @@ function App() {
       <section className="workspace">
         <header className="topbar">
           <div>
-            <span className="eyebrow">{activeLesson.kicker}</span>
-            <h1>{activeLesson.title}</h1>
+            {view === 'glossary' ? (
+              <>
+                <span className="eyebrow">Referință rapidă</span>
+                <h1>Glosar</h1>
+              </>
+            ) : (
+              <>
+                <span className="eyebrow">{activeLesson.kicker}</span>
+                <h1>{activeLesson.title}</h1>
+              </>
+            )}
           </div>
           <div className="top-actions">
             <button
@@ -157,55 +180,142 @@ function App() {
               {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
               {theme === 'dark' ? 'Light' : 'Dark'}
             </button>
-            <button className="icon-btn" onClick={() => moveLesson(-1)} type="button" aria-label="Lecția anterioară">
-              <ChevronLeft size={20} />
-            </button>
-            <button className="icon-btn" onClick={() => moveLesson(1)} type="button" aria-label="Lecția următoare">
-              <ChevronRight size={20} />
-            </button>
-            <button className={`done-btn ${completed[activeLesson.id] ? 'done' : ''}`} onClick={toggleDone} type="button">
-              <ClipboardCheck size={18} />
-              {completed[activeLesson.id] ? 'Recapitulat' : 'Marchează'}
-            </button>
+            {view !== 'glossary' && (
+              <>
+                <button className="icon-btn" onClick={() => moveLesson(-1)} type="button" aria-label="Lecția anterioară">
+                  <ChevronLeft size={20} />
+                </button>
+                <button className="icon-btn" onClick={() => moveLesson(1)} type="button" aria-label="Lecția următoare">
+                  <ChevronRight size={20} />
+                </button>
+                <button className={`done-btn ${completed[activeLesson.id] ? 'done' : ''}`} onClick={toggleDone} type="button">
+                  <ClipboardCheck size={18} />
+                  {completed[activeLesson.id] ? 'Recapitulat' : 'Marchează'}
+                </button>
+              </>
+            )}
           </div>
         </header>
 
-        <div className="mode-switch" role="tablist" aria-label="Mod studiu">
-          {[
-            ['learn', BookOpen, 'Lecție'],
-            ['flash', Brain, 'Carduri'],
-            ['quiz', Target, 'Quiz'],
-            ['exam', Sparkles, 'Examen'],
-          ].map(([id, Icon, label]) => (
-            <button className={mode === id ? 'selected' : ''} key={id} onClick={() => setMode(id)} type="button">
-              <Icon size={17} />
-              {label}
-            </button>
-          ))}
-        </div>
+        {view === 'glossary' ? (
+          <Glossary query={glossaryQuery} setQuery={setGlossaryQuery} />
+        ) : (
+          <>
+            <div className="mode-switch" role="tablist" aria-label="Mod studiu">
+              {[
+                ['learn', BookOpen, 'Lecție'],
+                ['flash', Brain, 'Carduri'],
+                ['quiz', Target, 'Quiz'],
+                ['exam', Sparkles, 'Examen'],
+              ].map(([id, Icon, label]) => (
+                <button className={mode === id ? 'selected' : ''} key={id} onClick={() => setMode(id)} type="button">
+                  <Icon size={17} />
+                  {label}
+                </button>
+              ))}
+            </div>
 
-        {mode === 'learn' && <LessonView lesson={activeLesson} />}
-        {mode === 'flash' && (
-          <Flashcards
-            card={card}
-            count={currentCards.length}
-            flipped={flipped}
-            index={flashIndex}
-            onFlip={() => setFlipped((value) => !value)}
-            onNext={() => {
-              setFlashIndex((value) => (value + 1) % currentCards.length);
-              setFlipped(false);
-            }}
-            onPrev={() => {
-              setFlashIndex((value) => (value - 1 + currentCards.length) % currentCards.length);
-              setFlipped(false);
-            }}
-          />
+            {mode === 'learn' && <LessonView lesson={activeLesson} />}
+            {mode === 'flash' && (
+              <Flashcards
+                card={card}
+                count={currentCards.length}
+                flipped={flipped}
+                index={flashIndex}
+                onFlip={() => setFlipped((value) => !value)}
+                onNext={() => {
+                  setFlashIndex((value) => (value + 1) % currentCards.length);
+                  setFlipped(false);
+                }}
+                onPrev={() => {
+                  setFlashIndex((value) => (value - 1 + currentCards.length) % currentCards.length);
+                  setFlipped(false);
+                }}
+              />
+            )}
+            {mode === 'quiz' && <Quiz lesson={activeLesson} answers={answers} setAnswers={setAnswers} />}
+            {mode === 'exam' && <ExamReview />}
+          </>
         )}
-        {mode === 'quiz' && <Quiz lesson={activeLesson} answers={answers} setAnswers={setAnswers} />}
-        {mode === 'exam' && <ExamReview />}
       </section>
     </main>
+  );
+}
+
+function Glossary({ query, setQuery }) {
+  const allTerms = useMemo(
+    () =>
+      lessons.flatMap((lesson) =>
+        lesson.details.map((detail) => ({
+          term: detail.term,
+          body: detail.body,
+          lessonTitle: lesson.title,
+          lessonColor: lesson.color,
+          lessonId: lesson.id,
+        })),
+      ),
+    [],
+  );
+
+  const trimmed = query.toLowerCase().trim();
+  const filtered = trimmed ? allTerms.filter((item) => `${item.term} ${item.body}`.toLowerCase().includes(trimmed)) : null;
+
+  return (
+    <div className="glossary">
+      <label className="glossary-search">
+        <Search size={18} />
+        <input
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          placeholder="Caută termen sau definiție..."
+          type="search"
+          autoFocus
+        />
+        {query && (
+          <button className="glossary-clear" onClick={() => setQuery('')} type="button" aria-label="Șterge căutarea">
+            <X size={16} />
+          </button>
+        )}
+      </label>
+
+      {filtered ? (
+        filtered.length > 0 ? (
+          <div className="glossary-grid">
+            {filtered.map((item) => (
+              <article className="glossary-card" key={`${item.lessonId}-${item.term}`}>
+                <span className="glossary-badge" style={{ background: item.lessonColor }}>
+                  {item.lessonTitle}
+                </span>
+                <h3>{item.term}</h3>
+                <p>{item.body}</p>
+              </article>
+            ))}
+          </div>
+        ) : (
+          <p className="glossary-empty">Niciun termen găsit pentru „{query}".</p>
+        )
+      ) : (
+        <div className="glossary-groups">
+          {lessons.map((lesson) => (
+            <section key={lesson.id} className="glossary-group" style={{ '--accent': lesson.color }}>
+              <div className="glossary-group-header">
+                <span className="lesson-dot" style={{ background: lesson.color }} />
+                <h2>{lesson.title}</h2>
+                <small>{lesson.kicker}</small>
+              </div>
+              <div className="glossary-grid">
+                {lesson.details.map((detail) => (
+                  <article className="glossary-card" key={detail.term}>
+                    <h3>{detail.term}</h3>
+                    <p>{detail.body}</p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
