@@ -280,9 +280,43 @@ function Flashcards({ card, count, flipped, index, onFlip, onNext, onPrev }) {
   );
 }
 
+function getSeed(text) {
+  let hash = 2166136261;
+  for (let index = 0; index < text.length; index += 1) {
+    hash ^= text.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+}
+
+function getShuffledQuestion(question, seedText) {
+  const options = question.options.map((text, originalIndex) => ({ text, originalIndex }));
+  let seed = getSeed(seedText);
+
+  for (let index = options.length - 1; index > 0; index -= 1) {
+    seed = Math.imul(seed, 1664525) + 1013904223;
+    const swapIndex = (seed >>> 0) % (index + 1);
+    [options[index], options[swapIndex]] = [options[swapIndex], options[index]];
+  }
+
+  const targetCorrectIndex = getSeed(`${seedText}-correct`) % options.length;
+  const currentCorrectIndex = options.findIndex((option) => option.originalIndex === question.answer);
+  [options[targetCorrectIndex], options[currentCorrectIndex]] = [options[currentCorrectIndex], options[targetCorrectIndex]];
+
+  return {
+    ...question,
+    options,
+    correctIndex: targetCorrectIndex,
+  };
+}
+
 function Quiz({ lesson, answers, setAnswers }) {
-  const score = lesson.quiz.filter((question, index) => answers[index] === question.answer).length;
-  const finished = Object.keys(answers).length === lesson.quiz.length;
+  const quizItems = useMemo(
+    () => lesson.quiz.map((question, index) => getShuffledQuestion(question, `${lesson.id}-${index}`)),
+    [lesson],
+  );
+  const score = quizItems.filter((question, index) => answers[index] === question.correctIndex).length;
+  const finished = Object.keys(answers).length === quizItems.length;
 
   return (
     <div className="quiz">
@@ -292,28 +326,28 @@ function Quiz({ lesson, answers, setAnswers }) {
           <h2>{lesson.title}</h2>
         </div>
         <strong>
-          {score}/{lesson.quiz.length}
+          {score}/{quizItems.length}
         </strong>
       </div>
 
-      {lesson.quiz.map((question, questionIndex) => (
+      {quizItems.map((question, questionIndex) => (
         <article className="question" key={question.question}>
           <h3>{question.question}</h3>
           <div className="options">
             {question.options.map((option, optionIndex) => {
               const selected = answers[questionIndex] === optionIndex;
               const answered = answers[questionIndex] !== undefined;
-              const correct = optionIndex === question.answer;
+              const correct = optionIndex === question.correctIndex;
               return (
                 <button
                   className={`${selected ? 'selected' : ''} ${answered && correct ? 'correct' : ''} ${
                     answered && selected && !correct ? 'wrong' : ''
                   }`}
-                  key={option}
+                  key={option.text}
                   onClick={() => setAnswers((current) => ({ ...current, [questionIndex]: optionIndex }))}
                   type="button"
                 >
-                  {option}
+                  {option.text}
                 </button>
               );
             })}
@@ -323,12 +357,16 @@ function Quiz({ lesson, answers, setAnswers }) {
 
       {finished && (
         <div className="result">
-          <strong>{score === lesson.quiz.length ? 'Perfect.' : 'Mai merge o tură scurtă.'}</strong>
+          <strong>{score === quizItems.length ? 'Perfect.' : 'Mai merge o tură scurtă.'}</strong>
           <span>
-            {score === lesson.quiz.length
+            {score === quizItems.length
               ? 'Capitolul acesta stă bine.'
               : 'Revino la termenii marcați și refă întrebările.'}
           </span>
+          <button className="done-btn" onClick={() => setAnswers({})} type="button">
+            <RotateCcw size={18} />
+            Reset quiz
+          </button>
         </div>
       )}
     </div>
